@@ -1,4 +1,5 @@
 import json
+import re
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -81,7 +82,7 @@ Return ONLY JSON:
   "recommendations": ["2-3 specific actions with expected impact"],
   "next_steps": ["who does what by when, including the follow-up call"],
   "seller_sentiment": "one or two words",
-  "spoken_summary": "a 40-60 word spoken recap for TTS: no symbols, numbers said like '44 thousand rupees', ends with a warm goodbye"
+  "spoken_summary": "a 40-60 word spoken closing recap for TTS: DO NOT start with any greeting (absolutely NO 'Hi', 'Hello', 'Namaste', or greeting the seller). Start directly with the recap or thank you (e.g. 'Thank you for your time today...', 'To summarize our discussion...'). No symbols, numbers said like '44 thousand rupees', ends with a warm goodbye"
 }}
 """
 
@@ -94,6 +95,17 @@ def _now() -> str:
 
 def _first_name() -> str:
     return SELLER["name"].split()[0]
+
+
+def strip_leading_greeting(text: str) -> str:
+    """Ensure closing statements don't start with greetings like 'Hi Rajesh ji,'."""
+    if not text:
+        return ""
+    pattern = r"^(?:(?:Hi|Hello|Hey|Namaste|Good\s+(?:morning|afternoon|evening))\s*(?:[A-Za-z]+\s+)?(?:ji)?[\s,–—\-:]*)+"
+    cleaned = re.sub(pattern, "", text.strip(), flags=re.IGNORECASE).strip()
+    if cleaned:
+        cleaned = cleaned[0].upper() + cleaned[1:]
+    return cleaned or text
 
 
 def _prior_text(prior: dict | None) -> str:
@@ -214,6 +226,8 @@ async def summarize(session: dict) -> dict:
         max_tokens=800,
         temperature=0.2,
     )
+    if summary.get("spoken_summary"):
+        summary["spoken_summary"] = strip_leading_greeting(summary["spoken_summary"])
     session["summary"] = summary
     session["ended_at"] = _now()
     session["stage"] = "closed"

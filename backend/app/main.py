@@ -108,6 +108,7 @@ async def end_session(session_id: str):
     if not session["summary"]:
         await agent.summarize(session)
     spoken = session["summary"].get("spoken_summary") or "Thank you for your time. Goodbye!"
+    spoken = agent.strip_leading_greeting(spoken)
     session["transcript"].append({"role": "assistant", "text": spoken, "ts": agent._now()})
     audio = await voice.synthesize(spoken)
     await db.save_session(session)

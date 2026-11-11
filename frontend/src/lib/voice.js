@@ -164,6 +164,7 @@ export class Speaker {
 
   play(base64) {
     this.stop()
+    if (!base64) return Promise.resolve()
     const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0))
     const url = URL.createObjectURL(new Blob([bytes], { type: 'audio/wav' }))
     this.audio = new Audio(url)
